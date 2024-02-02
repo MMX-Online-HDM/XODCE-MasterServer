@@ -11,6 +11,8 @@ RUN dotnet publish -c Release -o out
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/runtime:8.0
 ENV DOTNET_EnableDiagnostics=0
+EXPOSE 17788/udp
+EXPOSE 17788/tcp
 
 COPY --from=build-env ./app/out ./app
 
