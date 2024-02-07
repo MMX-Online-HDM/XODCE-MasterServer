@@ -3,7 +3,8 @@
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>false</ImplicitUsings>
-		<SelfContained>false</SelfContained>
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>true</SelfContained>
 		<Nullable>enable</Nullable>
 		<!--OutputPath>./bin/</OutputPath-->
 		<!--AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath-->

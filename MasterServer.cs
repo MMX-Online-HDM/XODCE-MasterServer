@@ -15,9 +15,9 @@ class MasterServer {
 	public double lastUpdate = -60;
 	public double lastCheck = -60;
 
-	public MasterServer() {
+	public MasterServer(int port) {
 		var config = new NetPeerConfiguration("XOD-P2P");
-		config.Port = 17788;
+		config.Port = port;
 		config.SetMessageTypeEnabled(NetIncomingMessageType.NatIntroductionSuccess, true);
 		config.SetMessageTypeEnabled(NetIncomingMessageType.UnconnectedData, true);
 		netServer = new NetServer(config);
@@ -28,30 +28,38 @@ class MasterServer {
 		while ((msg = netServer.ReadMessage()) != null) {
 			if (msg.MessageType == NetIncomingMessageType.UnconnectedData) {
 				switch (msg.ReadByte()) {
-					case 0:
+					case (int)MasterServerMsg.HostList:
 						sendHostList(msg);
 						break;
-					case 1:
+					case (int)MasterServerMsg.ConnectPeers:
 						connectPeers(msg);
 						break;
-					case 2:
+					case (int)MasterServerMsg.RequestDetails:
 						sendServerDetails(msg);
 						break;
-					case 3:
+					case (int)MasterServerMsg.RegisterHost:
 						registerHost(msg);
 						break;
-					case 4:
+					case (int)MasterServerMsg.RegisterDetails:
 						registerHostDetails(msg);
 						break;
-					case 5:
+					case (int)MasterServerMsg.RegisterInfo:
 						registerInfo(msg);
 						break;
-					case 6:
+					case (int)MasterServerMsg.UpdatePlayerNum:
 						updatePlayerNumber(msg);
+						break;
+					case (int)MasterServerMsg.DeleteHost:
+						deleteHost(msg);
+						break;
+					default:
+						Console.WriteLine("Error Type2!");
+						Console.WriteLine(msg.ToString());
 						break;
 				}
 			} else {
 				Console.WriteLine("Error!");
+				Console.WriteLine(msg.ToString());
 			}
 		}
 		// We do these checks each second.
@@ -195,4 +203,21 @@ class MasterServer {
 		}
 		//Console.WriteLine(".");
 	}
+
+	public void deleteHost(NetIncomingMessage msg) {
+		long serverId = msg.ReadInt64();
+		Console.WriteLine("Host with ID \"" + serverId + "\" was closed.");
+		serverList.Remove(serverId);
+	}
+}
+
+public enum MasterServerMsg {
+	HostList,
+	ConnectPeers,
+	RequestDetails,
+	RegisterHost,
+	RegisterDetails,
+	RegisterInfo,
+	UpdatePlayerNum,
+	DeleteHost
 }
