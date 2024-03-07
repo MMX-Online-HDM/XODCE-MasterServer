@@ -24,7 +24,7 @@ class MasterServer {
 	}
 
 	public void update() {
-		NetIncomingMessage msg;
+		NetIncomingMessage? msg;
 		while ((msg = netServer.ReadMessage()) != null) {
 			if (msg.MessageType == NetIncomingMessageType.UnconnectedData) {
 				switch (msg.ReadByte()) {
@@ -87,6 +87,10 @@ class MasterServer {
 	public void registerHost(NetIncomingMessage msg) {
 		long serverId = msg.ReadInt64();
 		Console.WriteLine("Got registration for host " + serverId);
+		if (msg.SenderEndPoint == null) {
+			Console.WriteLine("Error: Null endpoint.");
+			return;
+		}
 		serverList[serverId] = new ServerIp(
 			msg.ReadIPEndPoint(),
 			msg.SenderEndPoint,
@@ -106,17 +110,22 @@ class MasterServer {
 
 	public void connectPeers(NetIncomingMessage msg) {
 		long serverId = msg.ReadInt64();
-		//Console.WriteLine("Using UDP punch through for " + serverId);
+		IPEndPoint clientInternalIP = msg.ReadIPEndPoint();
+		Console.WriteLine("Using UDP punch through for " + serverId);
 		if (!serverDataList.ContainsKey(serverId)) {
 			Console.WriteLine("UDP Conction: Server requested does not exist");
 			return;
 		}
-		//Console.WriteLine("Info:");
-		IPEndPoint clientInternalIP = msg.ReadIPEndPoint();
-		//Console.WriteLine("  SV.intr: " + serverList[serverId].intr);
-		//Console.WriteLine("  SV.extr: " + serverList[serverId].extr);
-		//Console.WriteLine("  CL.intr: " + clientInternalIP);
-		//Console.WriteLine("  CL.extr: " + msg.SenderEndPoint);
+		Console.WriteLine("Info:");
+		Console.WriteLine("  SV.intr: " + serverList[serverId].intr);
+		Console.WriteLine("  SV.extr: " + serverList[serverId].extr);
+		Console.WriteLine("  CL.intr: " + clientInternalIP);
+		Console.WriteLine("  CL.extr: " + msg.SenderEndPoint);
+
+		if (msg.SenderEndPoint == null) {
+			Console.WriteLine("ERROR: Endpoint is null");
+			return;
+		}
 
 		netServer.Introduce(
 			serverList[serverId].intr,
@@ -128,6 +137,7 @@ class MasterServer {
 	}
 
 	public void sendServerDetails(NetIncomingMessage msg) {
+		if (msg.SenderEndPoint == null) { return; }
 		// It's a client wanting a list of registered hosts.
 		//Console.WriteLine("Sending server info.");
 		long serverId = msg.ReadInt64();
@@ -140,10 +150,14 @@ class MasterServer {
 		string jsonString = JsonConvert.SerializeObject(serverDataList[serverId]);
 		outMsg.Write(serverId);
 		outMsg.Write(jsonString);
+		outMsg.Write(serverList[serverId].extr);
 		netServer.SendUnconnectedMessage(outMsg, msg.SenderEndPoint);
 	}
 
 	public void sendHostList(NetIncomingMessage msg) {
+		if (msg.SenderEndPoint == null) {
+			return;
+		}
 		// It's a client wanting a list of registered hosts
 		NetOutgoingMessage outMsg = netServer.CreateMessage();
 		outMsg.Write((byte)100);
