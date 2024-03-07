@@ -32,7 +32,10 @@ class MasterServer {
 						sendHostList(msg);
 						break;
 					case (int)MasterServerMsg.ConnectPeers:
-						connectPeers(msg);
+						connectPeersShort(msg);
+						break;
+					case (int)MasterServerMsg.ConnectPeersLong:
+						connectPeersOld(msg);
 						break;
 					case (int)MasterServerMsg.RequestDetails:
 						sendServerDetails(msg);
@@ -108,7 +111,7 @@ class MasterServer {
 		}
 	}
 
-	public void connectPeers(NetIncomingMessage msg) {
+	public void connectPeersOld(NetIncomingMessage msg) {
 		long serverId = msg.ReadInt64();
 		IPEndPoint clientInternalIP = msg.ReadIPEndPoint();
 		Console.WriteLine("Using UDP punch through for " + serverId);
@@ -133,6 +136,34 @@ class MasterServer {
 			clientInternalIP,
 			msg.SenderEndPoint,
 			serverList[serverId].extr.Address.ToString() + ":" + serverList[serverId].extr.Port.ToString()
+		);
+	}
+	
+	public void connectPeersShort(NetIncomingMessage msg) {
+		long serverId = msg.ReadInt64();
+		IPEndPoint clientInternalIP = msg.ReadIPEndPoint();
+		Console.WriteLine("Using UDP punch through for " + serverId);
+		if (!serverDataList.ContainsKey(serverId)) {
+			Console.WriteLine("UDP Conction: Server requested does not exist");
+			return;
+		}
+		Console.WriteLine("Info:");
+		Console.WriteLine("  SV.intr: " + serverList[serverId].intr);
+		Console.WriteLine("  SV.extr: " + serverList[serverId].extr);
+		Console.WriteLine("  CL.intr: " + clientInternalIP);
+		Console.WriteLine("  CL.extr: " + msg.SenderEndPoint);
+
+		if (msg.SenderEndPoint == null) {
+			Console.WriteLine("ERROR: Endpoint is null");
+			return;
+		}
+
+		netServer.Introduce(
+			serverList[serverId].intr,
+			serverList[serverId].extr,
+			clientInternalIP,
+			msg.SenderEndPoint,
+			"p"
 		);
 	}
 
@@ -227,11 +258,12 @@ class MasterServer {
 
 public enum MasterServerMsg {
 	HostList,
-	ConnectPeers,
+	ConnectPeersLong,
 	RequestDetails,
 	RegisterHost,
 	RegisterDetails,
 	RegisterInfo,
 	UpdatePlayerNum,
-	DeleteHost
+	DeleteHost,
+	ConnectPeers,
 }
