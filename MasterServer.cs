@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Collections.Generic;
 using Lidgren.Network;
@@ -94,9 +94,17 @@ class MasterServer {
 			Console.WriteLine("Error: Null endpoint.");
 			return;
 		}
+		
+		IPEndPoint lanEndpoint = msg.ReadIPEndPoint();
+		IPEndPoint? vpnEndpoint = null;
+		if (msg.Position < msg.LengthBits - 1) {
+			vpnEndpoint = msg.ReadIPEndPoint();
+		}
+
 		serverList[serverId] = new ServerIp(
-			msg.ReadIPEndPoint(),
+			lanEndpoint,
 			msg.SenderEndPoint,
+			vpnEndpoint,
 			NetTime.Now
 		);
 	}
@@ -115,13 +123,13 @@ class MasterServer {
 		long serverId = msg.ReadInt64();
 		IPEndPoint clientInternalIP = msg.ReadIPEndPoint();
 		Console.WriteLine("Using UDP punch through for " + serverId);
-		if (!serverDataList.ContainsKey(serverId)) {
-			Console.WriteLine("UDP Conction: Server requested does not exist");
+		if (!serverList.ContainsKey(serverId)) {
+			Console.WriteLine("UDP Conection: ServerID requested does not exist");
 			return;
 		}
 		Console.WriteLine("Info:");
-		Console.WriteLine("  SV.intr: " + serverList[serverId].intr);
-		Console.WriteLine("  SV.extr: " + serverList[serverId].extr);
+		Console.WriteLine("  SV.intr: " + serverList[serverId].lan);
+		Console.WriteLine("  SV.extr: " + serverList[serverId].wlan);
 		Console.WriteLine("  CL.intr: " + clientInternalIP);
 		Console.WriteLine("  CL.extr: " + msg.SenderEndPoint);
 
@@ -131,11 +139,11 @@ class MasterServer {
 		}
 
 		netServer.Introduce(
-			serverList[serverId].intr,
-			serverList[serverId].extr,
+			serverList[serverId].lan,
+			serverList[serverId].wlan,
 			clientInternalIP,
 			msg.SenderEndPoint,
-			serverList[serverId].extr.Address.ToString() + ":" + serverList[serverId].extr.Port.ToString()
+			serverList[serverId].wlan.Address.ToString() + ":" + serverList[serverId].wlan.Port.ToString()
 		);
 	}
 	
@@ -143,13 +151,16 @@ class MasterServer {
 		long serverId = msg.ReadInt64();
 		IPEndPoint clientInternalIP = msg.ReadIPEndPoint();
 		Console.WriteLine("Using UDP punch through for " + serverId);
-		if (!serverDataList.ContainsKey(serverId)) {
-			Console.WriteLine("UDP Conction: Server requested does not exist");
+		if (!serverList.ContainsKey(serverId)) {
+			Console.WriteLine("UDP Conection: ServerID requested does not exist");
 			return;
 		}
 		Console.WriteLine("Info:");
-		Console.WriteLine("  SV.intr: " + serverList[serverId].intr);
-		Console.WriteLine("  SV.extr: " + serverList[serverId].extr);
+		Console.WriteLine("  SV.intr: " + serverList[serverId].lan);
+		Console.WriteLine("  SV.extr: " + serverList[serverId].wlan);
+		if (serverList[serverId].vpn != null) {
+			Console.WriteLine("  SV.vpn: " + serverList[serverId].vpn);
+		}
 		Console.WriteLine("  CL.intr: " + clientInternalIP);
 		Console.WriteLine("  CL.extr: " + msg.SenderEndPoint);
 
@@ -159,8 +170,8 @@ class MasterServer {
 		}
 
 		netServer.Introduce(
-			serverList[serverId].intr,
-			serverList[serverId].extr,
+			serverList[serverId].lan,
+			serverList[serverId].wlan,
 			clientInternalIP,
 			msg.SenderEndPoint,
 			"p"
@@ -176,12 +187,18 @@ class MasterServer {
 		if (!serverDataList.ContainsKey(serverId)) {
 			return;
 		}
+		if (!serverList.ContainsKey(serverId)) {
+			return;
+		}
 		NetOutgoingMessage outMsg = netServer.CreateMessage();
 		outMsg.Write((byte)101);
 		string jsonString = JsonConvert.SerializeObject(serverDataList[serverId]);
 		outMsg.Write(serverId);
 		outMsg.Write(jsonString);
-		outMsg.Write(serverList[serverId].extr);
+		outMsg.Write(serverList[serverId].wlan);
+		if (serverList[serverId].vpn != null) {
+			outMsg.Write(serverList[serverId].vpn!);
+		}
 		netServer.SendUnconnectedMessage(outMsg, msg.SenderEndPoint);
 	}
 
@@ -197,8 +214,8 @@ class MasterServer {
 			// Send registered host to client
 			outMsg.Write((byte)1);
 			outMsg.Write(kvp.Key);
-			outMsg.Write(kvp.Value.intr);
-			outMsg.Write(kvp.Value.extr);
+			outMsg.Write(kvp.Value.lan);
+			outMsg.Write(kvp.Value.wlan);
 			outMsg.Write(info.name);
 			outMsg.Write(info.maxPlayer);
 			outMsg.Write(info.playerCount);

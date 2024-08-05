@@ -3,13 +3,15 @@ using System.Net;
 namespace XodMasterServer;
 
 public class ServerIp {
-	public IPEndPoint intr;
-	public IPEndPoint extr;
+	public IPEndPoint lan;
+	public IPEndPoint wlan;
+	public IPEndPoint? vpn;
 	public double lastUpdate;
 
-	public ServerIp(IPEndPoint intr, IPEndPoint extr, double lastUpdate) {
-		this.intr = intr;
-		this.extr = extr;
+	public ServerIp(IPEndPoint lan, IPEndPoint wlan, IPEndPoint? vpn, double lastUpdate) {
+		this.lan = lan;
+		this.wlan = wlan;
+		this.vpn = vpn;
 		this.lastUpdate = lastUpdate;
 	}
 }
@@ -24,8 +26,8 @@ public class ServerInfo {
 
 	public ServerInfo(string name, byte playerCount, byte maxPlayer, string mode, string map, string fork) {
 		this.name = name;
-		this.playerCount = playerCount;
 		this.maxPlayer = maxPlayer;
+		this.playerCount = playerCount;
 		this.mode = mode;
 		this.map = map;
 		this.fork = fork;
